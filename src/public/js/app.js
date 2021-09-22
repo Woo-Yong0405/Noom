@@ -89,10 +89,9 @@ async function getMedia(deviceId) {
 
     const welcome = document.getElementById("welcome");
     welcomeForm = welcome.querySelector("form");
-    const input = welcomeForm.querySelector("input");
     
     let roomName;
-
+    
     async function startMedia() {
         welcome.hidden = true;
         call.hidden = false;
@@ -100,11 +99,11 @@ async function getMedia(deviceId) {
         makeConnection();
     }
     
-    function handleWelcomeSubmit(event) {
+    async function handleWelcomeSubmit(event) {
         event.preventDefault();
-        welcome.hidden = false;
-        call.hidden = true;
-        socket.emit("joinRoom", input.value, startMedia);
+        const input = welcomeForm.querySelector("input");
+        await startMedia();
+        socket.emit("joinRoom", input.value);
         roomName = input.value;
         input.value = "";
     }
@@ -114,13 +113,19 @@ async function getMedia(deviceId) {
 //Socket Code
 socket.on("welcome", async () => {
     const offer =  await myPeerConnection.createOffer();
-    myPeerConnection.setLocalDescription(offer);
-    console.log("Sent the Offer");
+    myPeerConnection.setLocalDescription(offer); 
     socket.emit("offer", offer, roomName);
 });
 
-socket.on("offer",  (offer) => {
-    console.log(offer);
+socket.on("offer", async (offer) => {
+    myPeerConnection.setRemoteDescription(offer);
+    const answer = await myPeerConnection.createAnswer();
+    myPeerConnection.setLocalDescription(answer);
+    socket.emit("answer", answer, roomName);
+})
+
+socket.on("answer",  (answer) => {
+    myPeerConnection.setRemoteDescription(answer);
 })
 
 //RTC Code
